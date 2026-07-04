@@ -69,7 +69,7 @@ class MainWindow(QMainWindow):
     
     def setup_ui(self):
         """Initialize the UI components."""
-        self.setWindowTitle("Desktop Organizer")
+        self.setWindowTitle("桌面智能整理器")
         self.setMinimumSize(1200, 800)
         self.showMaximized()
         
@@ -126,7 +126,7 @@ class MainWindow(QMainWindow):
         icon_label.setStyleSheet("font-size: 20px; background: transparent; border: none;")
         layout.addWidget(icon_label)
         
-        title_label = QLabel("Desktop Organizer")
+        title_label = QLabel("桌面智能整理器")
         title_label.setStyleSheet(f"""
             font-size: 16px;
             font-weight: 600;
@@ -140,7 +140,7 @@ class MainWindow(QMainWindow):
         
         # Tab buttons (pill style)
         self.tab_buttons = {}
-        tab_names = ['All Files', 'Temp Files', 'Duplicates', 'Projects', 'Organization']
+        tab_names = ['全部文件', '临时文件', '重复文件', '项目文件', '智能整理']
         
         for name in tab_names:
             btn = QPushButton(name)
@@ -172,7 +172,7 @@ class MainWindow(QMainWindow):
         layout.addStretch()
         
         # Scan button
-        self.scan_btn = QPushButton("🔍 Scan")
+        self.scan_btn = QPushButton("🔍 扫描")
         self.scan_btn.setFixedHeight(36)
         self.scan_btn.setStyleSheet(f"""
             QPushButton {{
@@ -195,7 +195,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.scan_btn)
         
         # AI Analyze button
-        self.ai_btn = QPushButton("✨ AI Analyze")
+        self.ai_btn = QPushButton("✨ AI分析")
         self.ai_btn.setFixedHeight(36)
         self.ai_btn.setStyleSheet(f"""
             QPushButton {{
@@ -243,7 +243,7 @@ class MainWindow(QMainWindow):
         layout.setSpacing(20)
         
         # Stats section
-        stats_label = QLabel("📊 OVERVIEW")
+        stats_label = QLabel("📊 概览")
         stats_label.setStyleSheet(f"""
             font-size: 11px;
             font-weight: 600;
@@ -258,8 +258,8 @@ class MainWindow(QMainWindow):
         stats_grid = QHBoxLayout()
         stats_grid.setSpacing(10)
         
-        self.stat_files = StatCard("📁", "0", "Files", COLORS['accent_blue'])
-        self.stat_folders = StatCard("📂", "0", "Folders", COLORS['accent_cyan'])
+        self.stat_files = StatCard("📁", "0", "文件", COLORS['accent_blue'])
+        self.stat_folders = StatCard("📂", "0", "文件夹", COLORS['accent_cyan'])
         
         stats_grid.addWidget(self.stat_files)
         stats_grid.addWidget(self.stat_folders)
@@ -269,8 +269,8 @@ class MainWindow(QMainWindow):
         stats_grid2 = QHBoxLayout()
         stats_grid2.setSpacing(10)
         
-        self.stat_size = StatCard("💾", "0 MB", "Size", COLORS['accent_purple'])
-        self.stat_temp = StatCard("🗑️", "0", "Temp", COLORS['accent_red'])
+        self.stat_size = StatCard("💾", "0 MB", "大小", COLORS['accent_purple'])
+        self.stat_temp = StatCard("🗑️", "0", "临时", COLORS['accent_red'])
         
         stats_grid2.addWidget(self.stat_size)
         stats_grid2.addWidget(self.stat_temp)
@@ -278,7 +278,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(stats_grid2)
         
         # Categories section
-        categories_label = QLabel("📂 CATEGORIES")
+        categories_label = QLabel("📂 文件分类")
         categories_label.setStyleSheet(f"""
             font-size: 11px;
             font-weight: 600;
@@ -400,7 +400,7 @@ class MainWindow(QMainWindow):
             }}
         """)
         
-        self.status_label = QLabel("Ready")
+        self.status_label = QLabel("就绪")
         self.statusBar().addWidget(self.status_label)
         
         self.progress_bar = QProgressBar()
@@ -464,7 +464,7 @@ class MainWindow(QMainWindow):
         self.ai_btn.setEnabled(False)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
-        self.status_label.setText("Scanning desktop...")
+        self.status_label.setText("正在扫描桌面...")
         
         scanner = DesktopScanner(self.config)
         analyzer = FileAnalyzer(self.config)
@@ -485,13 +485,13 @@ class MainWindow(QMainWindow):
         self.progress_bar.setVisible(False)
         
         if result is None:
-            self.status_label.setText("Scan failed!")
+            self.status_label.setText("扫描失败！")
             return
         
         self.update_ui()
         self.status_label.setText(
-            f"✅ Scan complete: {result.total_files} files, "
-            f"{result.total_folders} folders, {result.total_size_human}"
+            f"✅ 扫描完成: {result.total_files} 个文件, "
+            f"{result.total_folders} 个文件夹, {result.total_size_human}"
         )
     
     def update_ui(self):
@@ -553,7 +553,7 @@ class MainWindow(QMainWindow):
         html = f"""
         <div style='margin-bottom: 16px;'>
             <span style='font-size: 18px; font-weight: bold; color: {COLORS['accent_yellow']};'>
-                🔄 {len(duplicates)} Duplicate Groups Found
+                🔄 发现 {len(duplicates)} 组重复文件
             </span>
         </div>
         """
@@ -589,7 +589,7 @@ class MainWindow(QMainWindow):
         html = f"""
         <div style='margin-bottom: 16px;'>
             <span style='font-size: 18px; font-weight: bold; color: {COLORS['accent_cyan']};'>
-                📋 {len(projects)} Project Patterns Found
+                📋 发现 {len(projects)} 个项目模式
             </span>
         </div>
         """
@@ -611,8 +611,8 @@ class MainWindow(QMainWindow):
                 """
             if len(files) > 15:
                 html += f"""
-                <div style='color: {COLORS['text_tertiary']}; font-size: 12px; padding: 4px 0;'>
-                    ... and {len(files) - 15} more
+                <div style='color: {COLORS['text_secondary']}; font-size: 12px; padding: 4px 0;'>
+                    ... 还有 {len(files) - 15} 个更多
                 </div>
                 """
             html += "</div>"
@@ -646,7 +646,7 @@ class MainWindow(QMainWindow):
             return
         
         self.ai_btn.setEnabled(False)
-        self.status_label.setText("Running AI analysis...")
+        self.status_label.setText("正在运行AI分析...")
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
         
@@ -664,7 +664,7 @@ class MainWindow(QMainWindow):
         # Update organization preview
         self.update_organization_preview()
         
-        self.status_label.setText(f"✅ AI analysis complete: {len(self.folder_suggestions)} files classified")
+        self.status_label.setText(f"✅ AI分析完成: {len(self.folder_suggestions)} 个文件已分类")
     
     def update_organization_preview(self):
         """Update the organization preview with suggestions."""
@@ -676,7 +676,7 @@ class MainWindow(QMainWindow):
         temp_files = [s for s in self.folder_suggestions if '临时' in s.target_folder or 'temp' in s.target_folder.lower()]
         
         # Create preview text
-        preview_lines = ["📋 Organization Plan:\n"]
+        preview_lines = ["📋 整理计划:\\n"]
         
         # Group by target folder
         from collections import defaultdict
@@ -685,11 +685,11 @@ class MainWindow(QMainWindow):
             folder_groups[s.target_folder].append(s.file_name)
         
         for folder, files in sorted(folder_groups.items()):
-            preview_lines.append(f"\n📁 {folder} ({len(files)} files)")
+            preview_lines.append(f"\\n📁 {folder} ({len(files)} 个文件)")
             for f in files[:5]:
                 preview_lines.append(f"   • {f}")
             if len(files) > 5:
-                preview_lines.append(f"   ... and {len(files) - 5} more")
+                preview_lines.append(f"   ... 还有 {len(files) - 5} 个更多")
         
         preview_text = '\n'.join(preview_lines)
         
@@ -711,17 +711,17 @@ class MainWindow(QMainWindow):
         
         reply = QMessageBox.question(
             self,
-            "Execute Organization",
-            f"Move {len(self.folder_suggestions)} files to suggested folders?\n\nThis operation can be undone.",
+            "执行整理",
+            f"将 {len(self.folder_suggestions)} 个文件移动到建议的文件夹？\n\n此操作可以撤销。",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
         
         if reply == QMessageBox.StandardButton.Yes:
-            self.status_label.setText("Executing organization...")
+            self.status_label.setText("正在执行整理...")
             # TODO: Implement actual file moving
-            QMessageBox.information(self, "Success", "Organization preview complete. Implementation pending.")
-            self.status_label.setText("Ready")
+            QMessageBox.information(self, "成功", "整理预览完成，执行功能待实现。")
+            self.status_label.setText("就绪")
     
     def export_results(self):
         """Export scan results to JSON."""
@@ -730,12 +730,12 @@ class MainWindow(QMainWindow):
         
         file_path, _ = QFileDialog.getSaveFileName(
             self,
-            "Export Results",
-            os.path.expanduser("~/Desktop/scan_results.json"),
-            "JSON Files (*.json)"
+            "导出结果",
+            os.path.expanduser("~/Desktop/扫描结果.json"),
+            "JSON文件 (*.json)"
         )
         
         if file_path:
             scanner = DesktopScanner(self.config)
             scanner.export_json(self.scan_result, file_path)
-            QMessageBox.information(self, "Export Complete", f"Results exported to:\n{file_path}")
+            QMessageBox.information(self, "导出完成", f"结果已导出到：\n{file_path}")

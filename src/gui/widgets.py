@@ -475,7 +475,7 @@ class InfoPanel(QFrame):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(8)
         
-        title = QLabel("📋 File Details")
+        title = QLabel("📋 文件详情")
         title.setStyleSheet(f"""
             font-size: 12px;
             font-weight: 600;
@@ -486,7 +486,7 @@ class InfoPanel(QFrame):
         """)
         layout.addWidget(title)
         
-        self.detail_label = QLabel("Select a file to view details")
+        self.detail_label = QLabel("选择文件查看详情")
         self.detail_label.setStyleSheet(f"""
             font-size: 13px;
             color: {COLORS['text_tertiary']};
@@ -539,10 +539,10 @@ class OrgPreviewWidget(QFrame):
         summary_layout = QHBoxLayout()
         summary_layout.setSpacing(12)
         
-        self.files_to_move = StatCard("📦", "0", "Files to Move", COLORS['accent_blue'])
-        self.files_to_delete = StatCard("🗑️", "0", "Temp Files", COLORS['accent_red'])
-        self.duplicates = StatCard("🔄", "0", "Duplicates", COLORS['accent_yellow'])
-        self.risk_level = StatCard("⚡", "Low", "Risk Level", COLORS['accent_green'])
+        self.files_to_move = StatCard("📦", "0", "待移动文件", COLORS['accent_blue'])
+        self.files_to_delete = StatCard("🗑️", "0", "临时文件", COLORS['accent_red'])
+        self.duplicates = StatCard("🔄", "0", "重复文件", COLORS['accent_yellow'])
+        self.risk_level = StatCard("⚡", "低", "风险等级", COLORS['accent_green'])
         
         summary_layout.addWidget(self.files_to_move)
         summary_layout.addWidget(self.files_to_delete)
@@ -552,7 +552,7 @@ class OrgPreviewWidget(QFrame):
         layout.addLayout(summary_layout)
         
         # Preview content area
-        preview_label = QLabel("📋 Organization Preview")
+        preview_label = QLabel("📋 整理预览")
         preview_label.setStyleSheet(f"""
             font-size: 16px;
             font-weight: 600;
@@ -562,7 +562,7 @@ class OrgPreviewWidget(QFrame):
         """)
         layout.addWidget(preview_label)
         
-        self.preview_text = QLabel("Click 'AI Analyze' to generate organization suggestions")
+        self.preview_text = QLabel('点击"AI分析"生成整理建议')
         self.preview_text.setStyleSheet(f"""
             font-size: 13px;
             color: {COLORS['text_secondary']};
@@ -580,7 +580,7 @@ class OrgPreviewWidget(QFrame):
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
         
-        self.execute_btn = QPushButton("✨ Execute Organization")
+        self.execute_btn = QPushButton("✨ 执行整理")
         self.execute_btn.setFixedHeight(44)
         self.execute_btn.setMinimumWidth(200)
         self.execute_btn.setStyleSheet(f"""
@@ -631,7 +631,12 @@ class OrgPreviewWidget(QFrame):
             'high': COLORS['accent_red']
         }
         
-        summary = preview_data.get('summary', 'No preview available')
+        # Translate risk level
+        risk_map = {'low': '低', 'medium': '中', 'high': '高'}
+        risk_display = risk_map.get(risk, risk)
+        self.risk_level.update_value(risk_display.capitalize() if hasattr(risk_display, 'capitalize') else risk_display)
+        
+        summary = preview_data.get('summary', '暂无预览')
         self.preview_text.setText(summary)
         
         self.execute_btn.setEnabled(move_count > 0 or temp_count > 0)
