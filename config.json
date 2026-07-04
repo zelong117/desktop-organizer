@@ -1,0 +1,68 @@
+{
+    "desktop_path": "C:\\Users\\ww\\Desktop",
+    "max_depth": 3,
+    "skip_system_files": true,
+    "system_files": [
+        "desktop.ini",
+        "thumbs.db",
+        "ehthumbs.db",
+        "IconCache.db",
+        ".DS_Store"
+    ],
+    "scan_extensions": [],
+    "temp_patterns": [
+        "*~",
+        "*.bak",
+        "*.err",
+        "*.tmp",
+        "*.log",
+        "*.swp",
+        "~$*",
+        "*-bak*",
+        "*_backup*",
+        "*copy*",
+        "*副本*"
+    ],
+    "project_patterns": [
+        "P\\d{3,}",
+        "TAC\\d{2,}",
+        "CH\\d{4,}",
+        "\\d{10,}"
+    ],
+    "category_rules": {
+        "CAD": [".SLDPRT", ".sldprt", ".SLDASM", ".sldasm", ".SLDDRW", ".slddrw", ".dwg", ".dxf", ".step", ".stp", ".stl", ".igs", ".iges"],
+        "Office": [".doc", ".docx", ".xls", ".xlsx", ".xlsm", ".ppt", ".pptx", ".pdf"],
+        "Images": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".tif", ".webp", ".ico", ".svg"],
+        "Archives": [".zip", ".rar", ".7z", ".tar", ".gz", ".bz2"],
+        "Code": [".py", ".js", ".ts", ".jsx", ".tsx", ".html", ".css", ".json", ".xml", ".yml", ".yaml"],
+        "Video": [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv"],
+        "Audio": [".mp3", ".wav", ".flac", ".aac", ".ogg", ".wma"],
+        "Text": [".txt", ".md", ".csv", ".log", ".ini", ".cfg", ".conf"]
+    },
+    "ai_settings": {
+        "api_url": "https://rehdasu.cn/v1",
+        "api_key_env_var": "OPENAI_API_KEY",
+        "model": "gpt-5.4-mini",
+        "batch_size": 15,
+        "max_tokens": 2000,
+        "timeout": 30,
+        "max_retries": 3,
+        "retry_delay": 2
+    },
+    "cache_settings": {
+        "cache_enabled": true,
+        "cache_ttl_hours": 168
+    },
+    "folder_mappings": {
+        "00_今日待处理": ["temp_files", "recent_urgent"],
+        "01_东宝龙制造工作": ["project_files", "manufacturing_docs"],
+        "02_外贸订单与客户资料": ["trade_orders", "customer_docs"],
+        "03_草稿单_临时待处理": ["drafts", "temp_processing"],
+        "04_图纸_3D_研发": ["CAD", "technical_drawings"],
+        "05_合同报价与财务": ["contracts", "quotes", "finance"],
+        "06_AI_Codex_自用应用": ["Code", "ai_projects", "coding"],
+        "07_图片视频素材": ["Images", "Video", "media_assets"],
+        "98_软件安装包与工具": ["installers", "software_tools"],
+        "99_其他归档": ["misc_archive"]
+    }
+}
