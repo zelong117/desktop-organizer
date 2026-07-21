@@ -23,8 +23,17 @@ from ..organizer import Organizer
 from ..models import ScanResult
 from .widgets import (
     CategoryWidget, StatCard, FileTable, InfoPanel, 
-    OrgPreviewWidget, COLORS, get_category_color
+    OrgPreviewWidget, COLORS, UI_FONT_FAMILY
 )
+
+HELP_TEXT = """使用说明
+
+1. 扫描：读取桌面文件、文件夹、大小、修改时间，并识别临时文件、重复候选和项目模式。
+2. AI分析：根据文件名、类型和本地规则生成目标文件夹建议；未配置 API 时会使用规则分析。
+3. 预览：在“智能整理”中查看待移动文件、临时文件、重复候选和风险等级。
+4. 执行整理：确认预览后，一键移动文件到对应文件夹。支持撤销操作。
+
+建议先检查预览列表，确认目标文件夹符合预期后再执行。"""
 
 
 class ScanThread(QThread):
@@ -41,13 +50,42 @@ class ScanThread(QThread):
     def run(self):
         try:
             result = self.scanner.scan(progress_callback=self._on_progress)
-            self.progress.emit(96, "Analyzing files...")
+            self.progress.emit(96, "正在分析文件...")
             result = self.analyzer.analyze(result)
-            self.progress.emit(100, "Done!")
+            self.progress.emit(100, "完成")
             self.finished.emit(result)
         except Exception as e:
             print(f"Scan error: {e}")
             self.finished.emit(None)
+    
+    def _on_progress(self, value: int, message: str):
+        self.progress.emit(value, message)
+
+
+class ExecuteThread(QThread):
+    """Background thread for executing file organization."""
+    
+    progress = pyqtSignal(int, str)
+    finished = pyqtSignal(dict)
+    
+    def __init__(self, organizer, preview, temp_files=None):
+        super().__init__()
+        self.organizer = organizer
+        self.preview = preview
+        self.temp_files = temp_files or []
+    
+    def run(self):
+        try:
+            journal = self.organizer.execute_organization(
+                self.preview,
+                progress_callback=self._on_progress,
+                delete_temps=True,
+                temp_files=self.temp_files,
+            )
+            self.finished.emit(journal)
+        except Exception as e:
+            print(f"Execute error: {e}")
+            self.finished.emit({"error": str(e), "operations": [], "folders_created": [], "temp_files_deleted": []})
     
     def _on_progress(self, value: int, message: str):
         self.progress.emit(value, message)
@@ -62,6 +100,7 @@ class MainWindow(QMainWindow):
         self.scan_result = None
         self.current_filter = None
         self.folder_suggestions = None
+        self.org_preview_obj = None
         
         self.setup_ui()
         self.apply_theme()
@@ -114,6 +153,7 @@ class MainWindow(QMainWindow):
             QFrame {{
                 background: {COLORS['bg_secondary']};
                 border-bottom: 1px solid {COLORS['border']};
+                font-family: {UI_FONT_FAMILY};
             }}
         """)
         
@@ -223,6 +263,28 @@ class MainWindow(QMainWindow):
         self.ai_btn.clicked.connect(self.run_ai_analysis)
         self.ai_btn.setEnabled(False)
         layout.addWidget(self.ai_btn)
+
+        self.help_btn = QPushButton("使用说明")
+        self.help_btn.setFixedHeight(36)
+        self.help_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: transparent;
+                color: {COLORS['text_secondary']};
+                border: 1px solid {COLORS['border']};
+                border-radius: 8px;
+                padding: 0 16px;
+                font-family: {UI_FONT_FAMILY};
+                font-size: 13px;
+                font-weight: 600;
+            }}
+            QPushButton:hover {{
+                background: {COLORS['bg_tertiary']};
+                color: {COLORS['text_primary']};
+                border-color: {COLORS['border_hover']};
+            }}
+        """)
+        self.help_btn.clicked.connect(self.show_help)
+        layout.addWidget(self.help_btn)
         
         parent_layout.addWidget(top_bar)
     
@@ -357,7 +419,7 @@ class MainWindow(QMainWindow):
                 background: {COLORS['bg_primary']};
                 color: {COLORS['text_primary']};
                 border: none;
-                font-family: 'Segoe UI', sans-serif;
+                font-family: {UI_FONT_FAMILY};
                 font-size: 13px;
                 padding: 16px;
             }}
@@ -372,7 +434,7 @@ class MainWindow(QMainWindow):
                 background: {COLORS['bg_primary']};
                 color: {COLORS['text_primary']};
                 border: none;
-                font-family: 'Segoe UI', sans-serif;
+                font-family: {UI_FONT_FAMILY};
                 font-size: 13px;
                 padding: 16px;
             }}
@@ -396,6 +458,7 @@ class MainWindow(QMainWindow):
                 color: {COLORS['text_secondary']};
                 border-top: 1px solid {COLORS['border']};
                 padding: 4px 16px;
+                font-family: {UI_FONT_FAMILY};
                 font-size: 12px;
             }}
         """)
@@ -429,6 +492,7 @@ class MainWindow(QMainWindow):
             QWidget {{
                 background: transparent;
                 color: {COLORS['text_primary']};
+                font-family: {UI_FONT_FAMILY};
             }}
             QToolTip {{
                 background: {COLORS['bg_elevated']};
@@ -436,6 +500,7 @@ class MainWindow(QMainWindow):
                 border: 1px solid {COLORS['border']};
                 border-radius: 6px;
                 padding: 6px 10px;
+                font-family: {UI_FONT_FAMILY};
                 font-size: 12px;
             }}
         """)
@@ -443,11 +508,11 @@ class MainWindow(QMainWindow):
     def switch_tab(self, tab_name: str):
         """Switch between tabs."""
         tab_map = {
-            'All Files': 0,
-            'Temp Files': 1,
-            'Duplicates': 2,
-            'Projects': 3,
-            'Organization': 4
+            '全部文件': 0,
+            '临时文件': 1,
+            '重复文件': 2,
+            '项目文件': 3,
+            '智能整理': 4
         }
         
         # Update button states
@@ -547,7 +612,7 @@ class MainWindow(QMainWindow):
         
         duplicates = self.scan_result.duplicate_candidates
         if not duplicates:
-            self.duplicates_text.setPlainText("No duplicate candidates found.")
+            self.duplicates_text.setPlainText("未发现疑似重复文件。")
             return
         
         html = f"""
@@ -583,7 +648,7 @@ class MainWindow(QMainWindow):
         
         projects = self.scan_result.project_files
         if not projects:
-            self.projects_text.setPlainText("No project patterns detected.")
+            self.projects_text.setPlainText("未识别到项目文件模式。")
             return
         
         html = f"""
@@ -599,7 +664,7 @@ class MainWindow(QMainWindow):
             <div style='margin-bottom: 16px; padding: 16px; background: {COLORS['bg_secondary']}; 
                         border-radius: 8px; border: 1px solid {COLORS['border']};'>
                 <div style='color: {COLORS['accent_cyan']}; font-weight: 600; font-size: 14px; margin-bottom: 8px;'>
-                    📋 {pattern} <span style='color: {COLORS['text_secondary']}; font-weight: normal;'>({len(files)} files)</span>
+                    📋 {pattern} <span style='color: {COLORS['text_secondary']}; font-weight: normal;'>（{len(files)} 个文件）</span>
                 </div>
             """
             for f in files[:15]:
@@ -639,6 +704,10 @@ class MainWindow(QMainWindow):
     def on_file_selected(self, file_item):
         """Handle file selection."""
         self.info_panel.show_file(file_item)
+
+    def show_help(self):
+        """Show in-app usage help."""
+        QMessageBox.information(self, "使用说明", HELP_TEXT)
     
     def run_ai_analysis(self):
         """Run AI classification analysis."""
@@ -646,7 +715,7 @@ class MainWindow(QMainWindow):
             return
         
         self.ai_btn.setEnabled(False)
-        self.status_label.setText("正在运行AI分析...")
+        self.status_label.setText("正在运行 AI 分析...")
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
         
@@ -659,37 +728,50 @@ class MainWindow(QMainWindow):
         self.progress_bar.setVisible(False)
         
         # Switch to Organization tab
-        self.switch_tab('Organization')
+        self.switch_tab('智能整理')
         
         # Update organization preview
         self.update_organization_preview()
         
-        self.status_label.setText(f"✅ AI分析完成: {len(self.folder_suggestions)} 个文件已分类")
+        self.status_label.setText(f"✅ AI 分析完成：已为 {len(self.folder_suggestions)} 个文件生成整理建议")
     
     def update_organization_preview(self):
         """Update the organization preview with suggestions."""
         if not self.folder_suggestions:
             return
         
+        # Generate actual preview using Organizer
+        organizer = Organizer(self.config)
+        self.org_preview_obj = organizer.generate_preview(
+            self.scan_result, self.folder_suggestions
+        )
+        
         # Count operations
         files_to_move = [s for s in self.folder_suggestions if s.target_folder]
         temp_files = [s for s in self.folder_suggestions if '临时' in s.target_folder or 'temp' in s.target_folder.lower()]
         
-        # Create preview text
-        preview_lines = ["📋 整理计划:\\n"]
-        
-        # Group by target folder
+        # Create detailed preview text grouped by target folder
         from collections import defaultdict
         folder_groups = defaultdict(list)
         for s in files_to_move:
             folder_groups[s.target_folder].append(s.file_name)
         
+        preview_lines = [
+            f"📋 整理方案（共 {len(files_to_move)} 个文件将被移动）",
+            f"风险等级：{self.org_preview_obj.risk_level.upper()}",
+            ""
+        ]
+        
         for folder, files in sorted(folder_groups.items()):
-            preview_lines.append(f"\\n📁 {folder} ({len(files)} 个文件)")
-            for f in files[:5]:
+            preview_lines.append(f"📁 {folder} ({len(files)} 个文件)")
+            for f in files[:8]:
                 preview_lines.append(f"   • {f}")
-            if len(files) > 5:
-                preview_lines.append(f"   ... 还有 {len(files) - 5} 个更多")
+            if len(files) > 8:
+                preview_lines.append(f"   ... 还有 {len(files) - 8} 个文件")
+            preview_lines.append("")
+        
+        if temp_files:
+            preview_lines.append(f"🗑️ 将清理 {len(temp_files)} 个临时文件")
         
         preview_text = '\n'.join(preview_lines)
         
@@ -698,30 +780,167 @@ class MainWindow(QMainWindow):
             'files_to_move': files_to_move,
             'files_to_delete': temp_files,
             'duplicates': self.scan_result.duplicate_candidates if self.scan_result else [],
-            'risk_level': 'low',
+            'risk_level': self.org_preview_obj.risk_level,
             'summary': preview_text
         }
         
         self.org_preview.update_preview(preview_data)
     
     def execute_organization(self):
-        """Execute the file organization."""
-        if not self.folder_suggestions:
+        """Execute the file organization with confirmation."""
+        if not self.folder_suggestions or not self.org_preview_obj:
             return
+        
+        # Build confirmation message
+        move_count = self.org_preview_obj.files_to_move
+        risk = self.org_preview_obj.risk_level
+        risk_text = {'low': '低', 'medium': '中', 'high': '高'}.get(risk, risk)
+        
+        # Show folder summary in confirmation
+        folder_lines = []
+        for folder, count in sorted(self.org_preview_obj.folder_summary.items(), key=lambda x: -x[1]):
+            folder_lines.append(f"  📁 {folder}: {count} 个文件")
+        folder_summary = '\n'.join(folder_lines[:10])
+        if len(self.org_preview_obj.folder_summary) > 10:
+            folder_summary += f"\n  ... 还有 {len(self.org_preview_obj.folder_summary) - 10} 个文件夹"
+        
+        msg = (
+            f"⚠️ 确认执行整理？\n\n"
+            f"将移动 {move_count} 个文件到对应文件夹\n"
+            f"风险等级：{risk_text}\n\n"
+            f"目标文件夹：\n{folder_summary}\n\n"
+            f"执行后可以撤销恢复。"
+        )
         
         reply = QMessageBox.question(
             self,
-            "执行整理",
-            f"将 {len(self.folder_suggestions)} 个文件移动到建议的文件夹？\n\n此操作可以撤销。",
+            "确认执行整理",
+            msg,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
         
-        if reply == QMessageBox.StandardButton.Yes:
-            self.status_label.setText("正在执行整理...")
-            # TODO: Implement actual file moving
-            QMessageBox.information(self, "成功", "整理预览完成，执行功能待实现。")
-            self.status_label.setText("就绪")
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        
+        # Execute in background thread
+        self.org_preview.execute_btn.setEnabled(False)
+        self.scan_btn.setEnabled(False)
+        self.ai_btn.setEnabled(False)
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setValue(0)
+        self.status_label.setText("正在执行整理...")
+        
+        organizer = Organizer(self.config)
+        
+        # Collect temp files from scan_result
+        temp_files = [f for f in self.scan_result.temp_files] if self.scan_result else []
+        
+        self.exec_thread = ExecuteThread(organizer, self.org_preview_obj, temp_files)
+        self.exec_thread.progress.connect(self._on_exec_progress)
+        self.exec_thread.finished.connect(self._on_exec_complete)
+        self.exec_thread.start()
+    
+    def _on_exec_progress(self, value: int, message: str):
+        self.progress_bar.setValue(value)
+        self.status_label.setText(message)
+    
+    def _on_exec_complete(self, journal: dict):
+        self.progress_bar.setVisible(False)
+        self.scan_btn.setEnabled(True)
+        self.ai_btn.setEnabled(True)
+        
+        # Count results
+        ops = journal.get('operations', [])
+        success = sum(1 for op in ops if op.get('status') == 'success')
+        failed = sum(1 for op in ops if op.get('status') == 'failed')
+        skipped = sum(1 for op in ops if op.get('status') == 'skipped')
+        deleted = len(journal.get('temp_files_deleted', []))
+        
+        result_msg = (
+            f"✅ 整理完成！\n\n"
+            f"成功移动：{success} 个文件\n"
+            f"跳过：{skipped} 个文件\n"
+            f"失败：{failed} 个文件\n"
+        )
+        if deleted:
+            result_msg += f"清理临时文件：{deleted} 个\n"
+        
+        if success > 0:
+            result_msg += f"\n日志已保存，可随时撤销。"
+            self.org_preview.execute_btn.setText("↩️ 撤销整理")
+            self.org_preview.execute_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background: {COLORS['accent_yellow']};
+                    color: #000;
+                    border: none;
+                    border-radius: 8px;
+                    font-family: {UI_FONT_FAMILY};
+                    font-size: 14px;
+                    font-weight: 600;
+                    padding: 0 24px;
+                }}
+                QPushButton:hover {{
+                    background: #ca8a04;
+                }}
+            """)
+            self.org_preview.execute_btn.clicked.disconnect()
+            self.org_preview.execute_btn.clicked.connect(self.undo_organization)
+            self.org_preview.execute_btn.setEnabled(True)
+        
+        self.status_label.setText(f"整理完成: 成功 {success}, 失败 {failed}, 跳过 {skipped}")
+        QMessageBox.information(self, "整理完成", result_msg)
+    
+    def undo_organization(self):
+        """Undo the last organization."""
+        reply = QMessageBox.question(
+            self,
+            "确认撤销",
+            "确定要撤销上次整理操作吗？\n文件将被移回原始位置。",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        
+        organizer = Organizer(self.config)
+        result = organizer.undo_organization()
+        
+        if 'error' in result:
+            QMessageBox.warning(self, "撤销失败", f"错误：{result['error']}")
+            return
+        
+        msg = (
+            f"✅ 撤销完成\n\n"
+            f"已恢复：{result['restored']} 个文件\n"
+            f"失败：{result['failed']} 个文件"
+        )
+        QMessageBox.information(self, "撤销完成", msg)
+        
+        # Reset button
+        self.org_preview.execute_btn.setText("✨ 执行整理")
+        self.org_preview.execute_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: {COLORS['accent_green']};
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-family: {UI_FONT_FAMILY};
+                font-size: 14px;
+                font-weight: 600;
+                padding: 0 24px;
+            }}
+            QPushButton:hover {{
+                background: {COLORS['accent_green_hover']};
+            }}
+            QPushButton:disabled {{
+                background: {COLORS['bg_tertiary']};
+                color: {COLORS['text_tertiary']};
+            }}
+        """)
+        self.org_preview.execute_btn.clicked.disconnect()
+        self.org_preview.execute_btn.clicked.connect(self.execute_organization)
     
     def export_results(self):
         """Export scan results to JSON."""

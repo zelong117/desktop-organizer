@@ -92,7 +92,8 @@ class FolderSuggester:
 
     def suggest_all(self, file_items: list, ai_results: list = None) -> list:
         """
-        Generate folder suggestions for all files.
+        Generate folder suggestions for files on the desktop root only.
+        Files already in subdirectories are skipped (they're already organized).
 
         Args:
             file_items: List of FileItem objects
@@ -110,6 +111,12 @@ class FolderSuggester:
 
         for fi in file_items:
             if fi.is_directory:
+                continue
+
+            # Only suggest for files directly on the desktop root
+            # (skip files already in subdirectories)
+            parent_dir = os.path.dirname(fi.path)
+            if os.path.normpath(parent_dir) != os.path.normpath(self.config.get("desktop_path", "")):
                 continue
 
             # If AI already classified, use that with high weight

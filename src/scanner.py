@@ -17,7 +17,8 @@ class DesktopScanner:
     
     def __init__(self, config: dict):
         self.config = config
-        self.desktop_path = config.get("desktop_path", os.path.expanduser("~/Desktop"))
+        desktop_path = config.get("desktop_path") or os.path.expanduser("~/Desktop")
+        self.desktop_path = os.path.abspath(os.path.expandvars(os.path.expanduser(desktop_path)))
         self.max_depth = config.get("max_depth", 3)
         self.system_files = config.get("system_files", [])
         self.skip_system = config.get("skip_system_files", True)
@@ -39,7 +40,7 @@ class DesktopScanner:
         
         # First pass: count files for progress (lightweight, avoids double I/O on small dirs)
         if progress_callback:
-            progress_callback(0, "Counting files...")
+            progress_callback(0, "正在统计文件...")
         
         try:
             file_count = self._count_files(self.desktop_path, 0)
@@ -49,7 +50,7 @@ class DesktopScanner:
             file_count = 800  # reasonable fallback for typical desktop
         
         if progress_callback:
-            progress_callback(5, f"Found {file_count} items to scan...")
+            progress_callback(5, f"发现 {file_count} 个待扫描项目...")
         
         # Second pass: collect file info
         scanned = 0
@@ -65,7 +66,7 @@ class DesktopScanner:
         result.total_size_human = format_size(result.total_size_bytes)
         
         if progress_callback:
-            progress_callback(100, f"Scan complete: {result.total_files} files, {result.total_folders} folders")
+            progress_callback(100, f"扫描完成：{result.total_files} 个文件，{result.total_folders} 个文件夹")
         
         return result
     
@@ -105,7 +106,7 @@ class DesktopScanner:
             # Update progress
             if progress_callback and total_files > 0:
                 progress = min(95, int(scanned / total_files * 95))
-                progress_callback(progress, f"Scanning: {entry.name}")
+                progress_callback(progress, f"正在扫描：{entry.name}")
             
             try:
                 # Guard against broken symlinks / junctions on Windows

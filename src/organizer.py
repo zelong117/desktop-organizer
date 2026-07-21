@@ -67,7 +67,8 @@ class Organizer:
 
     def __init__(self, config: dict):
         self.config = config
-        self.desktop_path = config.get("desktop_path", os.path.expanduser("~/Desktop"))
+        desktop_path = config.get("desktop_path") or os.path.expanduser("~/Desktop")
+        self.desktop_path = os.path.abspath(os.path.expandvars(os.path.expanduser(desktop_path)))
         # Save journal in project root (one level up from src/)
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.log_path = os.path.join(project_root, "organization_log.json")

@@ -14,6 +14,10 @@ from PyQt6.QtGui import QColor, QFont, QPainter, QPen, QBrush
 from ..utils import format_size, format_datetime
 
 
+UI_FONT_FAMILY = '"Microsoft YaHei UI", "Microsoft YaHei", "微软雅黑", "Segoe UI", Arial, sans-serif'
+INITIAL_PREVIEW_TEXT = "先点击“扫描”更新桌面清单，再点击“AI分析”生成整理预览。"
+
+
 # ═══════════════════════════════════════════════════════════════
 # PREMIUM COLOR SYSTEM - Linear.app / Raycast / Figma inspired
 # ═══════════════════════════════════════════════════════════════
@@ -72,10 +76,27 @@ CATEGORY_COLORS = {
     'Other': COLORS['cat_other'],
 }
 
+CATEGORY_LABELS = {
+    'CAD': 'CAD图纸',
+    'Office': '办公文档',
+    'Images': '图片',
+    'Archives': '压缩包',
+    'Code': '代码',
+    'Video': '视频',
+    'Audio': '音频',
+    'Text': '文本',
+    'Other': '其他',
+}
+
 
 def get_category_color(category: str) -> str:
     """Get color for a category."""
     return CATEGORY_COLORS.get(category, COLORS['cat_other'])
+
+
+def get_category_label(category: str) -> str:
+    """Get display label for a category."""
+    return CATEGORY_LABELS.get(category, category)
 
 
 def score_dots(score: int) -> str:
@@ -99,6 +120,7 @@ class StatCard(QFrame):
                 border: 1px solid {COLORS['border']};
                 border-radius: 10px;
                 padding: 12px;
+                font-family: {UI_FONT_FAMILY};
             }}
             QFrame:hover {{
                 border-color: {COLORS['border_hover']};
@@ -168,6 +190,7 @@ class CategoryWidget(QFrame):
                 border: none;
                 border-radius: 6px;
                 padding: 4px 8px;
+                font-family: {UI_FONT_FAMILY};
             }}
         """
         self._hover_style = f"""
@@ -176,6 +199,7 @@ class CategoryWidget(QFrame):
                 border: none;
                 border-radius: 6px;
                 padding: 4px 8px;
+                font-family: {UI_FONT_FAMILY};
             }}
         """
         self.setStyleSheet(self._base_style)
@@ -192,7 +216,7 @@ class CategoryWidget(QFrame):
         layout.addWidget(dot)
         
         # Name
-        name_label = QLabel(category)
+        name_label = QLabel(get_category_label(category))
         name_label.setStyleSheet(f"""
             font-size: 13px;
             color: {COLORS['text_primary']};
@@ -273,7 +297,7 @@ class CategoryTag(QLabel):
     """Pill-shaped category tag."""
     
     def __init__(self, category: str):
-        super().__init__(category)
+        super().__init__(get_category_label(category))
         color = get_category_color(category)
         self.setStyleSheet(f"""
             font-size: 10px;
@@ -295,7 +319,7 @@ class FileTable(QTableWidget):
     
     file_selected = pyqtSignal(object)
     
-    COLUMNS = ['Name', 'Type', 'Size', 'Modified', 'Category', 'Score']
+    COLUMNS = ['名称', '类型', '大小', '修改时间', '分类', '重要性']
     
     def __init__(self):
         super().__init__(0, len(self.COLUMNS))
@@ -325,6 +349,7 @@ class FileTable(QTableWidget):
             QHeaderView::section {{
                 background: {COLORS['bg_secondary']};
                 color: {COLORS['text_secondary']};
+                font-family: {UI_FONT_FAMILY};
                 font-size: 11px;
                 font-weight: 600;
                 text-transform: uppercase;
@@ -343,6 +368,7 @@ class FileTable(QTableWidget):
                 gridline-color: {COLORS['border']};
                 selection-background-color: {COLORS['accent_blue']}30;
                 selection-color: {COLORS['text_primary']};
+                font-family: {UI_FONT_FAMILY};
                 font-size: 13px;
             }}
             QTableWidget::item {{
@@ -387,7 +413,7 @@ class FileTable(QTableWidget):
             self.setItem(row, 0, name_item)
             
             # Type
-            ext = file_item.extension.upper().replace('.', '') if file_item.extension else 'Folder'
+            ext = file_item.extension.upper().replace('.', '') if file_item.extension else '文件夹'
             type_item = QTableWidgetItem(ext)
             type_item.setForeground(QColor(COLORS['text_secondary']))
             self.setItem(row, 1, type_item)
@@ -404,7 +430,7 @@ class FileTable(QTableWidget):
             
             # Category (as tag)
             category = getattr(file_item, 'category', 'Other')
-            cat_item = QTableWidgetItem(category)
+            cat_item = QTableWidgetItem(get_category_label(category))
             cat_color = get_category_color(category)
             cat_item.setForeground(QColor(cat_color))
             self.setItem(row, 4, cat_item)
@@ -468,6 +494,7 @@ class InfoPanel(QFrame):
                 border: 1px solid {COLORS['border']};
                 border-radius: 10px;
                 padding: 16px;
+                font-family: {UI_FONT_FAMILY};
             }}
         """)
         
@@ -500,7 +527,7 @@ class InfoPanel(QFrame):
     
     def show_file(self, file_item):
         if file_item is None:
-            self.detail_label.setText("Select a file to view details")
+            self.detail_label.setText("选择文件查看详情")
             return
         
         details = f"""
@@ -508,7 +535,7 @@ class InfoPanel(QFrame):
 <span style="color: {COLORS['text_secondary']}">
 📁 {file_item.path}<br>
 📏 {file_item.size_human}<br>
-📅 Modified: {file_item.modified_time.strftime('%Y-%m-%d %H:%M')}
+📅 修改时间：{file_item.modified_time.strftime('%Y-%m-%d %H:%M')}
 </span>
 """
         self.detail_label.setText(details)
@@ -528,6 +555,7 @@ class OrgPreviewWidget(QFrame):
             QFrame {{
                 background: {COLORS['bg_primary']};
                 border: none;
+                font-family: {UI_FONT_FAMILY};
             }}
         """)
         
@@ -562,7 +590,7 @@ class OrgPreviewWidget(QFrame):
         """)
         layout.addWidget(preview_label)
         
-        self.preview_text = QLabel('点击"AI分析"生成整理建议')
+        self.preview_text = QLabel(INITIAL_PREVIEW_TEXT)
         self.preview_text.setStyleSheet(f"""
             font-size: 13px;
             color: {COLORS['text_secondary']};
@@ -589,6 +617,7 @@ class OrgPreviewWidget(QFrame):
                 color: white;
                 border: none;
                 border-radius: 8px;
+                font-family: {UI_FONT_FAMILY};
                 font-size: 14px;
                 font-weight: 600;
                 padding: 0 24px;
@@ -622,8 +651,6 @@ class OrgPreviewWidget(QFrame):
         self.files_to_move.update_value(str(move_count))
         self.files_to_delete.update_value(str(temp_count))
         self.duplicates.update_value(str(dup_count))
-        self.risk_level.update_value(risk.capitalize())
-        
         # Update risk color
         risk_colors = {
             'low': COLORS['accent_green'],

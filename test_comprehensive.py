@@ -451,7 +451,7 @@ def test_config():
 
     # Desktop path
     test("desktop_path set",
-         config.get("desktop_path") == r"C:\Users\ww\Desktop",
+         config.get("desktop_path") == r"%USERPROFILE%\Desktop",
          config.get("desktop_path"))
 
     # Category rules

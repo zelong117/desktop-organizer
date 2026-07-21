@@ -12,9 +12,24 @@ sys.path.insert(0, project_root)
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QFontDatabase
 
 from src.gui.main_window import MainWindow
+
+
+def resolve_desktop_path(path: str | None) -> str:
+    """Resolve config desktop path, defaulting to the current user's Desktop."""
+    path = path or os.path.expanduser("~/Desktop")
+    return os.path.abspath(os.path.expandvars(os.path.expanduser(path)))
+
+
+def preferred_ui_font() -> QFont:
+    """Return a Windows-friendly Chinese UI font with sensible fallbacks."""
+    families = set(QFontDatabase.families())
+    for family in ("Microsoft YaHei UI", "Microsoft YaHei", "微软雅黑", "Segoe UI"):
+        if family in families:
+            return QFont(family, 10)
+    return QFont("Arial", 10)
 
 
 def load_config() -> dict:
@@ -22,10 +37,10 @@ def load_config() -> dict:
     config_path = os.path.join(project_root, "config.json")
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            config = json.load(f)
     except FileNotFoundError:
         print(f"Config not found at {config_path}, using defaults")
-        return {
+        config = {
             "desktop_path": os.path.expanduser("~/Desktop"),
             "max_depth": 3,
             "skip_system_files": True,
@@ -34,6 +49,9 @@ def load_config() -> dict:
             "temp_patterns": [],
             "project_patterns": []
         }
+    
+    config["desktop_path"] = resolve_desktop_path(config.get("desktop_path"))
+    return config
 
 
 def main():
@@ -43,12 +61,11 @@ def main():
     
     # Create application
     app = QApplication(sys.argv)
-    app.setApplicationName("Desktop Organizer")
+    app.setApplicationName("桌面智能整理器")
     app.setOrganizationName("AI Desktop Tools")
     
     # Set default font
-    font = QFont("Segoe UI", 10)
-    app.setFont(font)
+    app.setFont(preferred_ui_font())
     
     # Load configuration
     config = load_config()
